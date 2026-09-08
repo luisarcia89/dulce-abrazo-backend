@@ -1,12 +1,25 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const Cliente = require('./models/Cliente');
+const session = require('express-session');
+const { sololoqueado } = require('./middleware/sololoqueado.js');
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: 'http://localhost:4200',
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(session({
+  secret: 'dulceAbrazoSecreto',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { maxAge: 1000 * 60 * 60 }
+}));
 
 
 mongoose.connect('mongodb://localhost:27017/ClientesDulceAbrazo')
@@ -15,7 +28,7 @@ mongoose.connect('mongodb://localhost:27017/ClientesDulceAbrazo')
 
 var productos = [];
 
-app.post('/productos/Guardar', (req, res) => {
+app.post('/productos/Guardar', sololoqueado, (req, res) => {
   var nuevoProducto = {
     nombre: req.body.nombre,
     descripcion: req.body.descripcion,
@@ -28,73 +41,60 @@ app.post('/productos/Guardar', (req, res) => {
   res.status(201).json({ mensaje: "Producto guardado con éxito", producto: nuevoProducto });
 });
 
-app.get('/productos/ListarTodos', (req, res) => {
+app.get('/productos/ListarTodos', sololoqueado, (req, res) => {
   res.status(200).json(productos);
 });
 
 
+var clientesController = require('./apis/controladores/clientesController.js');
 
-app.post('/clientes/Guardar', async (req, res) => {
-  try {
-    const nuevoCliente = new Cliente({
-      nombre: req.body.nombre,
-      cedula: req.body.cedula,
-      telefono: req.body.telefono,
-      direccion: req.body.direccion,
-    });
+app.post('/clientes/Guardar', sololoqueado, clientesController.Guardar);
+app.get('/clientes/ListarTodos', sololoqueado, clientesController.CargarTodos);
+app.get('/clientes/CargarId/:_id', sololoqueado, clientesController.CargarId);
+app.put('/clientes/Actualizar', sololoqueado, clientesController.Actualizar);
+app.delete('/clientes/Eliminar', sololoqueado, clientesController.Eliminar);
 
-    const clienteGuardado = await nuevoCliente.save();
-    res.status(201).json({ mensaje: "Cliente guardado con éxito", cliente: clienteGuardado });
-  } catch (error) {
-    res.status(500).json({ mensaje: "Error al guardar el cliente", error: error.message });
-  }
-});
 
-app.get('/clientes/ListarTodos', async (req, res) => {
-  try {
-    const clientes = await Cliente.find();
-    res.status(200).json(clientes);
-  } catch (error) {
-    res.status(500).json({ mensaje: "Error al listar los clientes", error: error.message });
-  }
-});
+var usuariosController = require('./apis/controladores/usuariosController.js');
 
-app.put('/clientes/Actualizar/:id', async (req, res) => {
-  try {
-    const clienteActualizado = await Cliente.findByIdAndUpdate(
-      req.params.id,
-      {
-        nombre: req.body.nombre,
-        cedula: req.body.cedula,
-        telefono: req.body.telefono,
-        direccion: req.body.direccion,
-      },
-      { new: true }
-    );
+app.post('/usuarios/Registrar', usuariosController.Registrar);
+app.post('/usuarios/Login', usuariosController.Login);
+app.post('/usuarios/Logout', usuariosController.Logout);
+app.get('/usuarios/Estado', usuariosController.Estado);
+app.get('/usuarios/CargarTodos', usuariosController.CargarTodos);
+app.get('/usuarios/CargarId/:_id', usuariosController.CargarId);
+app.put('/usuarios/Actualizar', usuariosController.Actualizar);
+app.post('/usuarios/Activar', usuariosController.Activar);
+app.post('/usuarios/SolicitarCodigoRecuperacion', usuariosController.SolicitarCodigoRecuperacion);
+app.post('/usuarios/RecuperarPassword', usuariosController.RecuperarPassword);
 
-    if (!clienteActualizado) {
-      return res.status(404).json({ mensaje: "No existe un cliente con ese id" });
-    }
 
-    res.status(200).json({ mensaje: "Cliente actualizado con éxito", cliente: clienteActualizado });
-  } catch (error) {
-    res.status(500).json({ mensaje: "Error al actualizar el cliente", error: error.message });
-  }
-});
+var rolesController = require('./apis/controladores/rolesController.js');
 
-app.delete('/clientes/Eliminar/:id', async (req, res) => {
-  try {
-    const clienteEliminado = await Cliente.findByIdAndDelete(req.params.id);
+app.post('/roles/Guardar', sololoqueado, rolesController.Guardar);
+app.get('/roles/CargarTodos', sololoqueado, rolesController.CargarTodos);
+app.get('/roles/CargarId/:_id', sololoqueado, rolesController.CargarId);
+app.put('/roles/Actualizar', sololoqueado, rolesController.Actualizar);
+app.delete('/roles/Eliminar', sololoqueado, rolesController.Eliminar);
 
-    if (!clienteEliminado) {
-      return res.status(404).json({ mensaje: "No existe un cliente con ese id" });
-    }
 
-    res.status(200).json({ mensaje: "Cliente eliminado con éxito" });
-  } catch (error) {
-    res.status(500).json({ mensaje: "Error al eliminar el cliente", error: error.message });
-  }
-});
+var apisController = require('./apis/controladores/apisController.js');
+
+app.post('/apis/Guardar', sololoqueado, apisController.Guardar);
+app.get('/apis/CargarTodos', sololoqueado, apisController.CargarTodos);
+app.get('/apis/CargarId/:_id', sololoqueado, apisController.CargarId);
+app.put('/apis/Actualizar', sololoqueado, apisController.Actualizar);
+app.delete('/apis/Eliminar', sololoqueado, apisController.Eliminar);
+
+
+var apirolesController = require('./apis/controladores/apirolesController.js');
+
+app.post('/apiroles/Guardar', sololoqueado, apirolesController.Guardar);
+app.get('/apiroles/CargarTodos', sololoqueado, apirolesController.CargarTodos);
+app.get('/apiroles/CargarId/:_id', sololoqueado, apirolesController.CargarId);
+app.put('/apiroles/Actualizar', sololoqueado, apirolesController.Actualizar);
+app.delete('/apiroles/Eliminar', sololoqueado, apirolesController.Eliminar);
+
 
 app.listen(3001, () => {
   console.log('Servidor Dulce Abrazo corriendo en el puerto 3001');
