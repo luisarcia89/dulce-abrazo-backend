@@ -26,6 +26,22 @@ usuariosController.Registrar = function (request, response) {
   });
 }
 
+usuariosController.Guardar = function (request, response) {
+  usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuarioExistente) {
+
+    if (usuarioExistente) {
+      return response.status(400).json({ mensaje: "Ya existe un usuario con ese email" });
+    }
+
+    usuariosModel.Guardar(request.body, function (doc, err) {
+      if (err) {
+        return response.status(500).json({ mensaje: "Error al guardar el usuario", error: err.message });
+      }
+      response.status(201).json({ mensaje: "Usuario guardado con éxito", usuario: doc });
+    });
+  });
+}
+
 usuariosController.Login = function (request, response) {
   usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuario) {
 
@@ -95,6 +111,12 @@ usuariosController.Actualizar = function (request, response) {
   });
 }
 
+usuariosController.Eliminar = function (request, response) {
+  usuariosModel.Eliminar(request.body, function (doc) {
+    response.status(200).json({ mensaje: "Usuario eliminado con éxito" });
+  });
+}
+
 usuariosController.Activar = function (request, response) {
   usuariosModel.Activar(request.body, function (doc) {
     if (!doc) {
@@ -128,6 +150,37 @@ usuariosController.RecuperarPassword = function (request, response) {
   usuariosModel.RecuperarPassword(request.body, function (doc) {
     if (!doc) {
       return response.status(400).json({ mensaje: "Código incorrecto o email inválido" });
+    }
+    response.status(200).json({ mensaje: "Contraseña actualizada con éxito" });
+  });
+}
+
+usuariosController.MisDatos = function (request, response) {
+  if (!request.session.usuarioId) {
+    return response.status(401).json({ mensaje: "Debes iniciar sesión" });
+  }
+
+  response.status(200).json({
+    nombre: request.session.nombre,
+    email: request.session.email,
+    nombrerol: request.session.nombrerol
+  });
+}
+
+usuariosController.CambiarPassword = function (request, response) {
+  if (!request.session.usuarioId) {
+    return response.status(401).json({ mensaje: "Debes iniciar sesión" });
+  }
+
+  var data = {
+    _id: request.session.usuarioId,
+    passwordActual: request.body.passwordActual,
+    passwordNueva: request.body.passwordNueva
+  };
+
+  usuariosModel.CambiarPassword(data, function (doc, err) {
+    if (err) {
+      return response.status(400).json({ mensaje: err });
     }
     response.status(200).json({ mensaje: "Contraseña actualizada con éxito" });
   });

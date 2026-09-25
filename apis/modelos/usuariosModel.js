@@ -36,8 +36,31 @@ usuariosModel.Registrar = function (data, callback) {
   });
 }
 
+usuariosModel.Guardar = function (data, callback) {
+  const instancia = new MyModel();
+  instancia.nombre = data.nombre;
+  instancia.email = data.email;
+  instancia.password = bcrypt.hashSync(data.password, 10);
+  instancia.estado = true;
+  instancia.nombrerol = data.nombrerol || "Cliente";
+  instancia.activo = true;
+  instancia.codigo = "";
+
+  instancia.save().then((doc) => {
+    return callback(doc);
+  }).catch((err) => {
+    return callback(null, err);
+  });
+}
+
 usuariosModel.BuscarPorEmail = function (data, callback) {
   MyModel.findOne({ email: data.email }).then((doc) => {
+    return callback(doc);
+  });
+}
+
+usuariosModel.BuscarPorId = function (data, callback) {
+  MyModel.findById(data._id).then((doc) => {
     return callback(doc);
   });
 }
@@ -60,6 +83,12 @@ usuariosModel.Actualizar = function (data, callback) {
     estado: data.estado,
     nombrerol: data.nombrerol
   }, { new: true }).then((doc) => {
+    return callback(doc);
+  });
+}
+
+usuariosModel.Eliminar = function (data, callback) {
+  MyModel.findByIdAndDelete(data._id).then((doc) => {
     return callback(doc);
   });
 }
@@ -92,6 +121,24 @@ usuariosModel.RecuperarPassword = function (data, callback) {
     { new: true }
   ).then((doc) => {
     return callback(doc);
+  });
+}
+
+usuariosModel.CambiarPassword = function (data, callback) {
+  MyModel.findById(data._id).then((usuario) => {
+    if (!usuario) {
+      return callback(null, "Usuario no encontrado");
+    }
+
+    const passwordCorrecta = bcrypt.compareSync(data.passwordActual, usuario.password);
+    if (!passwordCorrecta) {
+      return callback(null, "La contraseña actual es incorrecta");
+    }
+
+    usuario.password = bcrypt.hashSync(data.passwordNueva, 10);
+    usuario.save().then((doc) => {
+      return callback(doc);
+    });
   });
 }
 

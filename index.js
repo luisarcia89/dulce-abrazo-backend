@@ -41,7 +41,7 @@ app.post('/productos/Guardar', sololoqueado, (req, res) => {
   res.status(201).json({ mensaje: "Producto guardado con éxito", producto: nuevoProducto });
 });
 
-app.get('/productos/ListarTodos', sololoqueado, (req, res) => {
+app.get('/productos/ListarTodos', (req, res) => {
   res.status(200).json(productos);
 });
 
@@ -61,12 +61,17 @@ app.post('/usuarios/Registrar', usuariosController.Registrar);
 app.post('/usuarios/Login', usuariosController.Login);
 app.post('/usuarios/Logout', usuariosController.Logout);
 app.get('/usuarios/Estado', usuariosController.Estado);
-app.get('/usuarios/CargarTodos', usuariosController.CargarTodos);
-app.get('/usuarios/CargarId/:_id', usuariosController.CargarId);
-app.put('/usuarios/Actualizar', usuariosController.Actualizar);
 app.post('/usuarios/Activar', usuariosController.Activar);
 app.post('/usuarios/SolicitarCodigoRecuperacion', usuariosController.SolicitarCodigoRecuperacion);
 app.post('/usuarios/RecuperarPassword', usuariosController.RecuperarPassword);
+app.get('/usuarios/MisDatos', usuariosController.MisDatos);
+app.post('/usuarios/CambiarPassword', usuariosController.CambiarPassword);
+
+app.post('/usuarios/Guardar', sololoqueado, usuariosController.Guardar);
+app.get('/usuarios/CargarTodos', sololoqueado, usuariosController.CargarTodos);
+app.get('/usuarios/CargarId/:_id', sololoqueado, usuariosController.CargarId);
+app.put('/usuarios/Actualizar', sololoqueado, usuariosController.Actualizar);
+app.delete('/usuarios/Eliminar', sololoqueado, usuariosController.Eliminar);
 
 
 var rolesController = require('./apis/controladores/rolesController.js');
@@ -95,6 +100,13 @@ app.get('/apiroles/CargarId/:_id', sololoqueado, apirolesController.CargarId);
 app.put('/apiroles/Actualizar', sololoqueado, apirolesController.Actualizar);
 app.delete('/apiroles/Eliminar', sololoqueado, apirolesController.Eliminar);
 
+[
+  { "path": "/usuarios/Guardar", "metodo": "post", "nombrerol": "Administrador", "permiso": "Si" },
+  { "path": "/usuarios/CargarTodos", "metodo": "get", "nombrerol": "Administrador", "permiso": "Si" },
+  { "path": "/usuarios/CargarId/:_id", "metodo": "get", "nombrerol": "Administrador", "permiso": "Si" },
+  { "path": "/usuarios/Actualizar", "metodo": "put", "nombrerol": "Administrador", "permiso": "Si" },
+  { "path": "/usuarios/Eliminar", "metodo": "delete", "nombrerol": "Administrador", "permiso": "Si" }
+]
 
 app.listen(3001, () => {
   console.log('Servidor Dulce Abrazo corriendo en el puerto 3001');
