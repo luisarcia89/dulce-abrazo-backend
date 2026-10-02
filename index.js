@@ -26,24 +26,15 @@ mongoose.connect('mongodb://localhost:27017/ClientesDulceAbrazo')
   .then(() => console.log('Conectado a MongoDB - ClientesDulceAbrazo'))
   .catch((err) => console.error('Error al conectar a MongoDB', err));
 
-var productos = [];
+app.use('/uploads', express.static('uploads'));
 
-app.post('/productos/Guardar', sololoqueado, (req, res) => {
-  var nuevoProducto = {
-    nombre: req.body.nombre,
-    descripcion: req.body.descripcion,
-    precio: req.body.precio,
-    categoria: req.body.categoria,
-    cantidadStock: req.body.cantidadStock,
-  };
+var productosController = require('./apis/controladores/productosController.js');
 
-  productos.push(nuevoProducto);
-  res.status(201).json({ mensaje: "Producto guardado con éxito", producto: nuevoProducto });
-});
-
-app.get('/productos/ListarTodos', (req, res) => {
-  res.status(200).json(productos);
-});
+app.post('/productos/Guardar', sololoqueado, productosController.Guardar);
+app.get('/productos/ListarTodos', productosController.ListarTodos);
+app.get('/productos/CargarId/:_id', sololoqueado, productosController.CargarId);
+app.put('/productos/Actualizar', sololoqueado, productosController.Actualizar);
+app.delete('/productos/Eliminar', sololoqueado, productosController.Eliminar);
 
 
 var clientesController = require('./apis/controladores/clientesController.js');
@@ -72,7 +63,8 @@ app.get('/usuarios/CargarTodos', sololoqueado, usuariosController.CargarTodos);
 app.get('/usuarios/CargarId/:_id', sololoqueado, usuariosController.CargarId);
 app.put('/usuarios/Actualizar', sololoqueado, usuariosController.Actualizar);
 app.delete('/usuarios/Eliminar', sololoqueado, usuariosController.Eliminar);
-
+app.post('/usuarios/SubirAvatar', usuariosController.SubirAvatar);
+app.put('/usuarios/ActualizarMisDatos', usuariosController.ActualizarMisDatos);
 
 var rolesController = require('./apis/controladores/rolesController.js');
 

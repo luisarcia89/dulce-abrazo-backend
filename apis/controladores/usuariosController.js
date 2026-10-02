@@ -1,6 +1,8 @@
 var usuariosController = {}
 var usuariosModel = require("../modelos/usuariosModel.js");
 var mailer = require("../../utils/mailer.js");
+var turnstileConfig = require("../../utils/turnstileConfig.js");
+var anexosModel = require("../modelos/anexosModel.js");
 const bcrypt = require("bcrypt");
 
 usuariosController.Registrar = function (request, response) {
@@ -26,6 +28,35 @@ usuariosController.Registrar = function (request, response) {
   });
 }
 
+usuariosController.SubirAvatar = function (request, response) {
+
+  if (!request.session.usuarioId) {
+    return response.status(401).json({ mensaje: "Debes iniciar sesión" });
+  }
+
+  var configuracionArchivo = {
+    carpeta: "/avatares",
+    tamano: 2 * 1024 * 1024,
+    extensiones: [".png", ".jpg", ".jpeg", ".webp"],
+    single: "avatar",
+    nombre: request.session.usuarioId.toString()
+  };
+
+  anexosModel.subirArchivos(request, response, configuracionArchivo, function (respuestaArchivo) {
+
+    if (!respuestaArchivo.state) {
+      return response.status(400).json({ mensaje: respuestaArchivo.mensaje });
+    }
+
+    usuariosModel.ActualizarAvatar({
+      _id: request.session.usuarioId,
+      avatar: respuestaArchivo.ruta
+    }, function (doc) {
+      response.status(200).json({ mensaje: "Avatar actualizado con éxito", avatar: doc.avatar });
+    });
+  });
+}
+
 usuariosController.Guardar = function (request, response) {
   usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuarioExistente) {
 
@@ -43,35 +74,89 @@ usuariosController.Guardar = function (request, response) {
 }
 
 usuariosController.Login = function (request, response) {
-  usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuario) {
 
-    if (!usuario) {
-      return response.status(404).json({ mensaje: "No existe un usuario con ese email" });
-    }
+  var token = request.body.turnstileToken;
 
-    if (!usuario.estado) {
-      return response.status(403).json({ mensaje: "El usuario está inactivo" });
-    }
+  if (!token) {
+    return response.status(400).json({ mensaje: "Falta completar el captcha" });
+  }
 
-    if (!usuario.activo) {
-      return response.status(403).json({ mensaje: "Debes activar tu cuenta antes de iniciar sesión" });
-    }
+  fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      secret: turnstileConfig.secretKey,
+      response: token
+    })
+  })
+    .then((res) => res.json())
+    .then((resultadoCaptcha) => {
 
-    const passwordCorrecta = bcrypt.compareSync(request.body.password, usuario.password);
+      if (!resultadoCaptcha.success) {
+        return response.status(403).json({ mensaje: "Captcha inválido, intenta de nuevo" });
+      }
 
-    if (!passwordCorrecta) {
-      return response.status(401).json({ mensaje: "Contraseña incorrecta" });
-    }
+      usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuario) {
 
-    request.session.usuarioId = usuario._id;
-    request.session.nombre = usuario.nombre;
-    request.session.email = usuario.email;
-    request.session.nombrerol = usuario.nombrerol;
+        if (!usuario) {
+          return response.status(404).json({ mensaje: "No existe un usuario con ese email" });
+        }
 
-    response.status(200).json({
-      mensaje: "Login exitoso",
-      usuario: { nombre: usuario.nombre, email: usuario.email, nombrerol: usuario.nombrerol }
+        if (!usuario.estado) {
+          return response.status(403).json({ mensaje: "El usuario está inactivo" });
+        }
+
+        if (!usuario.activo) {
+          return response.status(403).json({ mensaje: "Debes activar tu cuenta antes de iniciar sesión" });
+        }
+
+        const passwordCorrecta = bcrypt.compareSync(request.body.password, usuario.password);
+
+        if (!passwordCorrecta) {
+          return response.status(401).json({ mensaje: "Contraseña incorrecta" });
+        }
+
+        request.session.usuarioId = usuario._id;
+        request.session.nombre = usuario.nombre;
+        request.session.email = usuario.email;
+        request.session.nombrerol = usuario.nombrerol;
+
+        response.status(200).json({
+          mensaje: "Login exitoso",
+          usuario: { nombre: usuario.nombre, email: usuario.email, nombrerol: usuario.nombrerol }
+        });
+      });
+    })
+    .catch((err) => {
+      console.error("Error verificando captcha", err);
+      response.status(500).json({ mensaje: "Error al verificar el captcha" });
     });
+}
+
+usuariosController.ActualizarMisDatos = function (request, response) {
+  if (!request.session.usuarioId) {
+    return response.status(401).json({ mensaje: "Debes iniciar sesión" });
+  }
+
+  var datos = {
+    _id: request.session.usuarioId,
+    nombre: request.body.nombre,
+    email: request.body.email,
+    telefono: request.body.telefono
+  };
+
+  usuariosModel.ActualizarMisDatos(datos, function (doc, err) {
+    if (err) {
+      if (err.code === 11000) {
+        return response.status(400).json({ mensaje: "Ese email ya está en uso por otro usuario" });
+      }
+      return response.status(500).json({ mensaje: "Error al actualizar los datos" });
+    }
+
+    request.session.nombre = doc.nombre;
+    request.session.email = doc.email;
+
+    response.status(200).json({ mensaje: "Datos actualizados con éxito", usuario: doc });
   });
 }
 
@@ -160,10 +245,19 @@ usuariosController.MisDatos = function (request, response) {
     return response.status(401).json({ mensaje: "Debes iniciar sesión" });
   }
 
-  response.status(200).json({
-    nombre: request.session.nombre,
-    email: request.session.email,
-    nombrerol: request.session.nombrerol
+  usuariosModel.BuscarPorId({ _id: request.session.usuarioId }, function (usuario) {
+    if (!usuario) {
+      return response.status(404).json({ mensaje: "Usuario no encontrado" });
+    }
+
+    response.status(200).json({
+      nombre: usuario.nombre,
+      email: usuario.email,
+      nombrerol: usuario.nombrerol,
+      avatar: usuario.avatar,
+      telefono: usuario.telefono,
+      estado: usuario.estado
+    });
   });
 }
 

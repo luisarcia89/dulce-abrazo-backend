@@ -10,7 +10,9 @@ var usuariosSchema = new Schema({
   estado: { type: Boolean, default: true },
   nombrerol: { type: String, default: "Cliente" },
   activo: { type: Boolean, default: false },
-  codigo: { type: String }
+  codigo: { type: String },
+  avatar: { type: String, default: "" },
+  telefono: { type: String, default: "" }
 });
 
 const MyModel = mongoose.model("usuarios", usuariosSchema);
@@ -31,6 +33,18 @@ usuariosModel.Registrar = function (data, callback) {
 
   instancia.save().then((doc) => {
     return callback(doc);
+  }).catch((err) => {
+    return callback(null, err);
+  });
+}
+
+usuariosModel.ActualizarMisDatos = function (data, callback) {
+  MyModel.findByIdAndUpdate(data._id, {
+    nombre: data.nombre,
+    email: data.email,
+    telefono: data.telefono
+  }, { new: true }).then((doc) => {
+    return callback(doc, null);
   }).catch((err) => {
     return callback(null, err);
   });
@@ -139,6 +153,14 @@ usuariosModel.CambiarPassword = function (data, callback) {
     usuario.save().then((doc) => {
       return callback(doc);
     });
+  });
+}
+
+usuariosModel.ActualizarAvatar = function (data, callback) {
+  MyModel.findByIdAndUpdate(data._id, {
+    avatar: data.avatar
+  }, { new: true }).then((doc) => {
+    return callback(doc);
   });
 }
 
