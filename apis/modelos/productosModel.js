@@ -8,7 +8,8 @@ var productosSchema = new Schema({
   precio: { type: Number, required: true },
   categoria: { type: String },
   cantidadStock: { type: Number, default: 0 },
-  imagen: { type: String }
+  imagen: { type: String },
+  imagenes: { type: [String], default: [] }
 });
 
 const MyModel = mongoose.model("productos", productosSchema);
@@ -47,6 +48,14 @@ productosModel.Actualizar = function (data, callback) {
     categoria: data.categoria,
     cantidadStock: data.cantidadStock,
     imagen: data.imagen
+  }, { new: true }).then((doc) => {
+    return callback(doc);
+  });
+}
+
+productosModel.ActualizarGaleria = function (data, callback) {
+  MyModel.findByIdAndUpdate(data._id, {
+    imagenes: data.imagenes
   }, { new: true }).then((doc) => {
     return callback(doc);
   });

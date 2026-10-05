@@ -28,13 +28,27 @@ mongoose.connect('mongodb://localhost:27017/ClientesDulceAbrazo')
 
 app.use('/uploads', express.static('uploads'));
 
+var carritosController = require('./apis/controladores/carritosController.js');
+
+app.post('/carritos/MiCarrito', carritosController.MiCarrito);
+app.get('/carritos/CargarTodos/:idtracking', carritosController.CargarTodos);
+app.put('/carritos/ActualizarCantidad', carritosController.ActualizarCantidad);
+app.delete('/carritos/Eliminar', carritosController.Eliminar);
+
+var misdireccionesController = require('./apis/controladores/misdireccionesController.js');
+
+app.post('/misdirecciones/Guardar', misdireccionesController.Guardar);
+app.get('/misdirecciones/ListarTodos', misdireccionesController.ListarTodos);
+app.delete('/misdirecciones/Eliminar', misdireccionesController.Eliminar);
+
 var productosController = require('./apis/controladores/productosController.js');
 
 app.post('/productos/Guardar', sololoqueado, productosController.Guardar);
 app.get('/productos/ListarTodos', productosController.ListarTodos);
-app.get('/productos/CargarId/:_id', sololoqueado, productosController.CargarId);
+app.get('/productos/CargarId/:_id', productosController.CargarId);
 app.put('/productos/Actualizar', sololoqueado, productosController.Actualizar);
 app.delete('/productos/Eliminar', sololoqueado, productosController.Eliminar);
+app.post('/productos/SubirGaleria', sololoqueado, productosController.SubirGaleria);
 
 
 var clientesController = require('./apis/controladores/clientesController.js');

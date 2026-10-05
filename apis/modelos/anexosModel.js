@@ -56,4 +56,48 @@ anexosModel.subirArchivos = function (request, response, data, callback) {
   });
 }
 
+anexosModel.subirArchivosMultiples = function (request, response, data, callback) {
+
+  const carpetaDestino = path.join(__dirname, "..", "..", "uploads", data.carpeta || "");
+
+  if (!fs.existsSync(carpetaDestino)) {
+    fs.mkdirSync(carpetaDestino, { recursive: true });
+  }
+
+  const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+      cb(null, carpetaDestino);
+    },
+    filename: function (req, file, cb) {
+      const ext = path.extname(file.originalname).toLowerCase();
+
+      if (data.extensiones && !data.extensiones.includes(ext)) {
+        return cb(new Error("Extensión no permitida"));
+      }
+
+      const nombreFinal = Date.now() + "-" + Math.round(Math.random() * 1e9) + ext;
+      cb(null, nombreFinal);
+    }
+  });
+
+  const upload = multer({
+    storage: storage,
+    limits: { fileSize: data.tamano || (5 * 1024 * 1024) }
+  }).array(data.campo || "archivos", data.maximo || 4);
+
+  upload(request, response, function (err) {
+    if (err) {
+      return callback({ state: false, mensaje: err.message });
+    }
+
+    if (!request.files || request.files.length === 0) {
+      return callback({ state: true, mensaje: "Sin archivos nuevos", rutas: [] });
+    }
+
+    const rutas = request.files.map((archivo) => (data.carpeta || "") + "/" + archivo.filename);
+
+    return callback({ state: true, mensaje: "Archivos subidos con éxito", rutas: rutas });
+  });
+}
+
 module.exports = anexosModel;

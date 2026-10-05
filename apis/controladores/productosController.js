@@ -26,6 +26,31 @@ productosController.Guardar = function (request, response) {
   });
 }
 
+productosController.SubirGaleria = function (request, response) {
+
+  var configuracion = {
+    carpeta: "/productos/galeria",
+    tamano: 5 * 1024 * 1024,
+    extensiones: [".png", ".jpg", ".jpeg", ".webp"],
+    campo: "imagenes",
+    maximo: 4
+  };
+
+  anexosModel.subirArchivosMultiples(request, response, configuracion, function (resultado) {
+
+    if (!resultado.state) {
+      return response.status(400).json({ mensaje: resultado.mensaje });
+    }
+
+    productosModel.ActualizarGaleria({
+      _id: request.body._id,
+      imagenes: resultado.rutas
+    }, function (doc) {
+      response.status(200).json({ mensaje: "Galería actualizada con éxito", imagenes: doc.imagenes });
+    });
+  });
+}
+
 productosController.ListarTodos = function (request, response) {
   productosModel.ListarTodos(function (docs) {
     response.status(200).json(docs);
