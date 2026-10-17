@@ -19,7 +19,9 @@ clientesModel.Guardar = function (data, callback) {
   instancia.direccion = data.direccion;
 
   instancia.save().then((doc) => {
-    return callback(doc);
+    return callback(doc, null);
+  }).catch((err) => {
+    return callback(null, err);
   });
 }
 
@@ -41,7 +43,7 @@ clientesModel.Actualizar = function (data, callback) {
     cedula: data.cedula,
     telefono: data.telefono,
     direccion: data.direccion
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

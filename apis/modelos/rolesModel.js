@@ -34,7 +34,7 @@ rolesModel.CargarId = function (data, callback) {
 rolesModel.Actualizar = function (data, callback) {
   MyModel.findByIdAndUpdate(data._id, {
     nombrerol: data.nombrerol
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

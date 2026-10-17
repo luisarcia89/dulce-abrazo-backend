@@ -40,7 +40,7 @@ apisModel.Actualizar = function (data, callback) {
     path: data.path,
     metodo: data.metodo,
     descripcion: data.descripcion
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

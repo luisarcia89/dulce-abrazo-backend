@@ -58,6 +58,17 @@ usuariosController.SubirAvatar = function (request, response) {
 }
 
 usuariosController.Guardar = function (request, response) {
+
+   if (!request.body.nombre) {
+    return response.status(400).json({ mensaje: "El campo nombre es obligatorio" });
+  }
+  if (!request.body.email) {
+    return response.status(400).json({ mensaje: "El campo email es obligatorio" });
+  }
+  if (!request.body.password) {
+    return response.status(400).json({ mensaje: "El campo password es obligatorio" });
+  }
+  
   usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuarioExistente) {
 
     if (usuarioExistente) {

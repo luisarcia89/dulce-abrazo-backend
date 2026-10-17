@@ -43,7 +43,7 @@ apirolesModel.Actualizar = function (data, callback) {
     metodo: data.metodo,
     nombrerol: data.nombrerol,
     permiso: data.permiso
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

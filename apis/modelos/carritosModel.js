@@ -64,7 +64,7 @@ carritosModel.CargarTodos = function (idtracking, callback) {
 carritosModel.ActualizarCantidad = function (data, callback) {
   MyModel.findByIdAndUpdate(data._id, {
     cantidad: data.cantidad
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

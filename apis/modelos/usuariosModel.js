@@ -43,7 +43,7 @@ usuariosModel.ActualizarMisDatos = function (data, callback) {
     nombre: data.nombre,
     email: data.email,
     telefono: data.telefono
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc, null);
   }).catch((err) => {
     return callback(null, err);
@@ -96,7 +96,7 @@ usuariosModel.Actualizar = function (data, callback) {
     nombre: data.nombre,
     estado: data.estado,
     nombrerol: data.nombrerol
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }
@@ -111,7 +111,7 @@ usuariosModel.Activar = function (data, callback) {
   MyModel.findOneAndUpdate(
     { email: data.email, codigo: data.codigo },
     { activo: true, codigo: "" },
-    { new: true }
+    { returnDocument: 'after' }
   ).then((doc) => {
     return callback(doc);
   });
@@ -122,7 +122,7 @@ usuariosModel.GenerarCodigoRecuperacion = function (data, callback) {
   MyModel.findOneAndUpdate(
     { email: data.email },
     { codigo: nuevoCodigo },
-    { new: true }
+    { returnDocument: 'after' }
   ).then((doc) => {
     return callback(doc);
   });
@@ -132,7 +132,7 @@ usuariosModel.RecuperarPassword = function (data, callback) {
   MyModel.findOneAndUpdate(
     { email: data.email, codigo: data.codigo },
     { password: bcrypt.hashSync(data.password, 10), codigo: "" },
-    { new: true }
+    { returnDocument: 'after' }
   ).then((doc) => {
     return callback(doc);
   });
@@ -159,7 +159,7 @@ usuariosModel.CambiarPassword = function (data, callback) {
 usuariosModel.ActualizarAvatar = function (data, callback) {
   MyModel.findByIdAndUpdate(data._id, {
     avatar: data.avatar
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

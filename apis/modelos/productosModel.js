@@ -48,7 +48,7 @@ productosModel.Actualizar = function (data, callback) {
     categoria: data.categoria,
     cantidadStock: data.cantidadStock,
     imagen: data.imagen
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }
@@ -56,7 +56,7 @@ productosModel.Actualizar = function (data, callback) {
 productosModel.ActualizarGaleria = function (data, callback) {
   MyModel.findByIdAndUpdate(data._id, {
     imagenes: data.imagenes
-  }, { new: true }).then((doc) => {
+  }, { returnDocument: 'after' }).then((doc) => {
     return callback(doc);
   });
 }

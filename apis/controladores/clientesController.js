@@ -2,7 +2,18 @@ var clientesController = {}
 var clientesModel = require("../modelos/clientesModel.js");
 
 clientesController.Guardar = function (request, response) {
-  clientesModel.Guardar(request.body, function (doc) {
+
+  if (!request.body.nombre) {
+    return response.status(400).json({ mensaje: "El campo nombre es obligatorio" });
+  }
+  if (!request.body.cedula) {
+    return response.status(400).json({ mensaje: "El campo cedula es obligatorio" });
+  }
+
+  clientesModel.Guardar(request.body, function (doc, err) {
+    if (err) {
+      return response.status(500).json({ mensaje: "Error al guardar el cliente" });
+    }
     response.status(201).json({ mensaje: "Cliente guardado con éxito", cliente: doc });
   });
 }
