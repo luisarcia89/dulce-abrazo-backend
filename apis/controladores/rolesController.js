@@ -2,6 +2,11 @@ var rolesController = {}
 var rolesModel = require("../modelos/rolesModel.js");
 
 rolesController.Guardar = function (request, response) {
+
+  if (!request.body.nombrerol) {
+    return response.status(400).json({ mensaje: "El campo nombrerol es obligatorio" });
+  }
+
   rolesModel.Guardar(request.body, function (doc, err) {
     if (err) {
       return response.status(500).json({ mensaje: "Error al guardar el rol", error: err.message });

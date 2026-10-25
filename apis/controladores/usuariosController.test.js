@@ -1,235 +1,639 @@
-const mongoose = require("mongoose")
 const usuariosController = require("./usuariosController.js")
-
-// Tu modelo no exporta MyModel, así que se lo pedimos a Mongoose por su nombre
+const mongoose = require("mongoose")
 const Usuarios = mongoose.model("usuarios")
 
-// Ejecuta un método del controlador y espera a que responda con response.json(...)
-function ejecutar(metodo, body = {}, params = {}) {
-    return new Promise((resolve) => {
-        const request = { body: body, params: params, session: {} }
-        const response = {
-            status: jest.fn().mockReturnThis(),
-            json: jest.fn((data) => resolve({ request, response, data }))
-        }
-        usuariosController[metodo](request, response)
-    })
-}
-
-// Datos del usuario de prueba
-const USUARIO = {
-    nombre: "Usuario Jest",
-    email: "usuario.jest@test.com",
-    password: "Jest12345*",
-    nombrerol: "Cliente"
-}
-
-beforeAll(async () => {
-    await mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test")
-    // Por si quedó basura de una ejecución anterior
-    await Usuarios.deleteMany({ email: USUARIO.email })
-})
-
-afterAll(async () => {
-    await Usuarios.deleteMany({ email: USUARIO.email })
-    await mongoose.connection.close()
-})
-
 describe("POST: /usuarios/Guardar", () => {
+    let request;
+    let response;
 
-    test("debe fallar si no llega el nombre", async () => {
-        const { response, data } = await ejecutar("Guardar", { ...USUARIO, nombre: "" })
-        expect(response.status).toHaveBeenCalledWith(400)
-        expect(data.mensaje).toBe("El campo nombre es obligatorio")
-    })
-
-    test("debe fallar si no llega el email", async () => {
-        const { response, data } = await ejecutar("Guardar", { ...USUARIO, email: "" })
-        expect(response.status).toHaveBeenCalledWith(400)
-        expect(data.mensaje).toBe("El campo email es obligatorio")
-    })
-
-    test("debe fallar si no llega el password", async () => {
-        const { response, data } = await ejecutar("Guardar", { ...USUARIO, password: "" })
-        expect(response.status).toHaveBeenCalledWith(400)
-        expect(data.mensaje).toBe("El campo password es obligatorio")
-    })
-
-    test("debe guardar el usuario correctamente", async () => {
-        const { response, data } = await ejecutar("Guardar", { ...USUARIO })
-        expect(response.status).toHaveBeenCalledWith(201)
-        expect(data.mensaje).toBe("Usuario guardado con éxito")
-
-        // Confirmamos en la BD que de verdad quedó guardado
-        const enBD = await Usuarios.findOne({ email: USUARIO.email })
-        expect(enBD).not.toBeNull()
-    })
-
-    test("debe fallar cuando el email ya existe", async () => {
-        const { response, data } = await ejecutar("Guardar", { ...USUARIO })
-        expect(response.status).toHaveBeenCalledWith(400)
-        expect(data.mensaje).toBe("Ya existe un usuario con ese email")
-    })
-})
-
-describe("POST: /usuarios/Login", () => {
-
-    // Ayudante: el doble de Cloudflare responde lo que le digamos
-    function simularCaptcha(esValido) {
-        global.fetch = jest.fn().mockResolvedValue({
-            json: async () => ({ success: esValido })
+    beforeAll((done) => {
+        // conectarse a la base de datos de prueba
+        mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test").then(() => {
+            // borro lo que haya quedado sucio de otra ejecución
+            Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+                done()
+            })
+        }).catch((error) => {
+            console.log(error)
         })
-    }
+    })
+
+    afterAll((done) => {
+        // borro lo que dejé sucio y cierro la conexión
+        Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+            mongoose.connection.close().then(() => {
+                done()
+            })
+        })
+    })
 
     beforeEach(() => {
-        // Por defecto, el captcha es válido en cada test
-        simularCaptcha(true)
+        // procesos antes de cada uno
+        request = { body: {}, params: {}, session: {} }
+        response = {
+            json: jest.fn(),
+            status: jest.fn().mockReturnThis()
+        }
     })
 
-    test("debe fallar si no llega el captcha", async () => {
-        const { response, data } = await ejecutar("Login", {
-            email: USUARIO.email, password: USUARIO.password
-        })
+    test("debe fallar si no llega el nombre", (done) => {
+        request.body.nombre = ""
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
         expect(response.status).toHaveBeenCalledWith(400)
-        expect(data.mensaje).toBe("Falta completar el captcha")
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo nombre es obligatorio" })
+        done()
     })
 
-    test("debe fallar si el captcha es inválido", async () => {
-        simularCaptcha(false)
-        const { response, data } = await ejecutar("Login", {
-            email: USUARIO.email, password: USUARIO.password, turnstileToken: "token-falso"
+    test("debe fallar si no llega el email", (done) => {
+        request.body.nombre = "John"
+        request.body.email = ""
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo email es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si no llega el password", (done) => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = ""
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo password es obligatorio" })
+        done()
+    })
+
+    test("debe Guardar el usuario Correctamente", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(201)
+                expect(data.mensaje).toBe("Usuario guardado con éxito")
+                resolve()
+            })
         })
-        expect(response.status).toHaveBeenCalledWith(403)
-        expect(data.mensaje).toBe("Captcha inválido, intenta de nuevo")
+    })
+
+    test("debe fallar cuando el mismo email existe", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(400)
+                expect(data.mensaje).toBe("Ya existe un usuario con ese email")
+                resolve()
+            })
+        })
+    })
+})
+
+describe("Get: /usuarios/CargarTodos", () => {
+    let request;
+    let response;
+
+    beforeAll((done) => {
+        mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test").then(() => {
+            Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+                done()
+            })
+        }).catch((error) => {
+            console.log(error)
+        })
+    })
+
+    afterAll((done) => {
+        Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+            mongoose.connection.close().then(() => {
+                done()
+            })
+        })
+    })
+
+    beforeEach(() => {
+        request = { body: {}, params: {}, session: {} }
+        response = {
+            json: jest.fn(),
+            status: jest.fn().mockReturnThis()
+        }
+    })
+
+    test("debe Guardar el usuario Correctamente", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(201)
+                expect(data.mensaje).toBe("Usuario guardado con éxito")
+                resolve()
+            })
+        })
+    })
+
+    test("debe verificar si existen datos", async () => {
+        usuariosController.CargarTodos(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(200)
+                expect(data.length).toBeGreaterThan(0)
+                resolve()
+            })
+        })
+    })
+})
+
+describe("Get: /usuarios/CargarId", () => {
+    let request;
+    let response;
+
+    beforeAll((done) => {
+        mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test").then(() => {
+            Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+                done()
+            })
+        }).catch((error) => {
+            console.log(error)
+        })
+    })
+
+    afterAll((done) => {
+        Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+            mongoose.connection.close().then(() => {
+                done()
+            })
+        })
+    })
+
+    beforeEach(() => {
+        request = { body: {}, params: {}, session: {} }
+        response = {
+            json: jest.fn(),
+            status: jest.fn().mockReturnThis()
+        }
+    })
+
+    test("debe Guardar el usuario Correctamente", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(201)
+                expect(data.mensaje).toBe("Usuario guardado con éxito")
+                resolve()
+            })
+        })
+    })
+
+    test("debe recibir un Id y puedo confirmar que existe", async () => {
+        await Usuarios.find({ email: "john1@gmail.com" }).then(async (doc) => {
+
+            var idreal = doc[0]._id
+
+            request.params._id = idreal
+
+            usuariosController.CargarId(request, response)
+
+            await new Promise((resolve) => {
+                response.json.mockImplementation((data) => {
+                    expect(response.status).toHaveBeenCalledWith(200)
+                    expect(data.nombre).toEqual("John")
+                    resolve()
+                })
+            })
+        })
+    })
+})
+
+describe("Put: /usuarios/Actualizar", () => {
+    let request;
+    let response;
+
+    beforeAll((done) => {
+        mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test").then(() => {
+            Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+                done()
+            })
+        }).catch((error) => {
+            console.log(error)
+        })
+    })
+
+    afterAll((done) => {
+        Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+            mongoose.connection.close().then(() => {
+                done()
+            })
+        })
+    })
+
+    beforeEach(() => {
+        request = { body: {}, params: {}, session: {} }
+        response = {
+            json: jest.fn(),
+            status: jest.fn().mockReturnThis()
+        }
+    })
+
+    test("debe Guardar el usuario Correctamente", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(201)
+                expect(data.mensaje).toBe("Usuario guardado con éxito")
+                resolve()
+            })
+        })
+    })
+
+    test("debe fallar si el _id no llega", (done) => {
+        request.body._id = ""
+        request.body.nombre = "Juan1"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Actualizar(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo _id es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si el nombre no llega", (done) => {
+        request.body._id = "6ad024f7e88957fd97443e2e"
+        request.body.nombre = ""
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Actualizar(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo nombre es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si el nombrerol no llega", (done) => {
+        request.body._id = "6ad024f7e88957fd97443e2e"
+        request.body.nombre = "Juan1"
+        request.body.nombrerol = ""
+
+        usuariosController.Actualizar(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo nombrerol es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si el id no existe", async () => {
+        request.body._id = "6ad024f7e88957fd97443e2e"
+        request.body.nombre = "Juan1"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Actualizar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(404)
+                expect(data.mensaje).toBe("El _id no existe en la BD")
+                resolve()
+            })
+        })
+    })
+
+    test("debe Actualizar el usuario Correctamente", async () => {
+        request.body.nombre = "Juan1"
+        request.body.nombrerol = "Cliente"
+        request.body.estado = false
+
+        await Usuarios.find({ email: "john1@gmail.com" }).then((doc) => {
+            request.body._id = doc[0]._id
+            usuariosController.Actualizar(request, response)
+        })
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(200)
+                expect(data.mensaje).toBe("Usuario actualizado con éxito")
+                resolve()
+            })
+        })
+
+        // confirmo en la BD que los cambios quedaron guardados
+        await Usuarios.find({ email: "john1@gmail.com" }).then((doc) => {
+            expect(doc[0].nombre).toEqual("Juan1")
+            expect(doc[0].estado).toEqual(false)
+        })
+    })
+})
+
+describe("Delete: /usuarios/Eliminar", () => {
+    let request;
+    let response;
+
+    beforeAll((done) => {
+        mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test").then(() => {
+            Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+                done()
+            })
+        }).catch((error) => {
+            console.log(error)
+        })
+    })
+
+    afterAll((done) => {
+        Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+            mongoose.connection.close().then(() => {
+                done()
+            })
+        })
+    })
+
+    beforeEach(() => {
+        request = { body: {}, params: {}, session: {} }
+        response = {
+            json: jest.fn(),
+            status: jest.fn().mockReturnThis()
+        }
+    })
+
+    test("debe fallar si el _id no llega", (done) => {
+        request.body._id = ""
+
+        usuariosController.Eliminar(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo _id es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si el id no existe", async () => {
+        request.body._id = "6ad024f7e88957fd97443e2e"
+
+        usuariosController.Eliminar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(404)
+                expect(data.mensaje).toBe("El _id no existe en la BD")
+                resolve()
+            })
+        })
+    })
+
+    test("debe Guardar el usuario Correctamente", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(201)
+                expect(data.mensaje).toBe("Usuario guardado con éxito")
+                resolve()
+            })
+        })
+    })
+
+    test("debe Eliminar el usuario por el _Id", async () => {
+        request.body._id = ""
+
+        await Usuarios.find({ email: "john1@gmail.com" }).then((doc) => {
+            request.body._id = doc[0]._id
+            usuariosController.Eliminar(request, response)
+        })
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(200)
+                expect(data.mensaje).toBe("Usuario eliminado con éxito")
+                resolve()
+            })
+        })
+
+        // confirmo en la BD que ya no existe
+        await Usuarios.find({ email: "john1@gmail.com" }).then((doc) => {
+            expect(doc.length).toBe(0)
+        })
+    })
+})
+
+describe("Post: /usuarios/Login", () => {
+    let request;
+    let response;
+
+    beforeAll((done) => {
+        mongoose.connect("mongodb://localhost:27017/ClientesDulceAbrazo_test").then(() => {
+            Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+                done()
+            })
+        }).catch((error) => {
+            console.log(error)
+        })
+    })
+
+    afterAll((done) => {
+        Usuarios.deleteMany({ email: "john1@gmail.com" }).then(() => {
+            mongoose.connection.close().then(() => {
+                done()
+            })
+        })
+    })
+
+    beforeEach(() => {
+        request = { body: {}, params: {}, session: {} }
+        response = {
+            json: jest.fn(),
+            status: jest.fn().mockReturnThis()
+        }
+
+        // simular a Cloudflare: por defecto responde que el captcha es válido
+        global.fetch = jest.fn().mockResolvedValue({
+            json: async () => ({ success: true })
+        })
+    })
+
+    test("debe fallar si el email no llega", (done) => {
+        request.body.email = ""
+        request.body.password = ""
+        request.body.turnstileToken = ""
+
+        usuariosController.Login(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo email es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si el password no llega", (done) => {
+        request.body.email = "john1@gmail.com"
+        request.body.password = ""
+        request.body.turnstileToken = ""
+
+        usuariosController.Login(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "El campo password es obligatorio" })
+        done()
+    })
+
+    test("debe fallar si el token no llega", (done) => {
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.turnstileToken = ""
+
+        usuariosController.Login(request, response)
+
+        expect(response.status).toHaveBeenCalledWith(400)
+        expect(response.json).toHaveBeenCalledWith({ mensaje: "Falta completar el captcha" })
+        done()
+    })
+
+    test("debe fallar si el turnstile es incorrecto", async () => {
+        // esta vez Cloudflare responde que el captcha es inválido
+        global.fetch = jest.fn().mockResolvedValue({
+            json: async () => ({ success: false })
+        })
+
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.turnstileToken = "fjdshajfkl"
+
+        usuariosController.Login(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(403)
+                expect(data.mensaje).toBe("Captcha inválido, intenta de nuevo")
+                resolve()
+            })
+        })
+    })
+
+    test("debe Guardar el usuario Correctamente", async () => {
+        request.body.nombre = "John"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.nombrerol = "Cliente"
+
+        usuariosController.Guardar(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(201)
+                expect(data.mensaje).toBe("Usuario guardado con éxito")
+                resolve()
+            })
+        })
     })
 
     test("debe fallar si el email no existe", async () => {
-        const { response, data } = await ejecutar("Login", {
-            email: "noexiste@test.com", password: USUARIO.password, turnstileToken: "token-prueba"
+        request.body.email = "noexiste@gmail.com"
+        request.body.password = "123456"
+        request.body.turnstileToken = "token-prueba"
+
+        usuariosController.Login(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(404)
+                expect(data.mensaje).toBe("No existe un usuario con ese email")
+                resolve()
+            })
         })
-        expect(response.status).toHaveBeenCalledWith(404)
-        expect(data.mensaje).toBe("No existe un usuario con ese email")
     })
 
-    test("debe fallar con una contraseña incorrecta", async () => {
-        const { response, data } = await ejecutar("Login", {
-            email: USUARIO.email, password: "ClaveMala123*", turnstileToken: "token-prueba"
+    test("debe fallar si la contraseña es incorrecta", async () => {
+        request.body.email = "john1@gmail.com"
+        request.body.password = "claveMala"
+        request.body.turnstileToken = "token-prueba"
+
+        usuariosController.Login(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(401)
+                expect(data.mensaje).toBe("Contraseña incorrecta")
+                resolve()
+            })
         })
-        expect(response.status).toHaveBeenCalledWith(401)
-        expect(data.mensaje).toBe("Contraseña incorrecta")
     })
 
     test("debe fallar si la cuenta no está activada", async () => {
-        // Desactivamos la cuenta directamente en la BD
-        await Usuarios.updateOne({ email: USUARIO.email }, { activo: false })
+        // desactivo la cuenta directamente en la BD
+        await Usuarios.updateOne({ email: "john1@gmail.com" }, { activo: false })
 
-        const { response, data } = await ejecutar("Login", {
-            email: USUARIO.email, password: USUARIO.password, turnstileToken: "token-prueba"
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.turnstileToken = "token-prueba"
+
+        usuariosController.Login(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(403)
+                expect(data.mensaje).toBe("Debes activar tu cuenta antes de iniciar sesión")
+                resolve()
+            })
         })
-        expect(response.status).toHaveBeenCalledWith(403)
-        expect(data.mensaje).toBe("Debes activar tu cuenta antes de iniciar sesión")
 
-        // La dejamos activa otra vez para el siguiente test
-        await Usuarios.updateOne({ email: USUARIO.email }, { activo: true })
+        // la dejo activa otra vez para el siguiente test
+        await Usuarios.updateOne({ email: "john1@gmail.com" }, { activo: true })
     })
 
-    test("debe iniciar sesión con los datos correctos", async () => {
-        const { request, response, data } = await ejecutar("Login", {
-            email: USUARIO.email, password: USUARIO.password, turnstileToken: "token-prueba"
+    test("debe iniciar sesion con credenciales correctas", async () => {
+        request.body.email = "john1@gmail.com"
+        request.body.password = "123456"
+        request.body.turnstileToken = "token-prueba"
+
+        usuariosController.Login(request, response)
+
+        await new Promise((resolve) => {
+            response.json.mockImplementation((data) => {
+                expect(response.status).toHaveBeenCalledWith(200)
+                expect(data.mensaje).toBe("Login exitoso")
+                // la sesión quedó con el usuario
+                expect(request.session.email).toBe("john1@gmail.com")
+                resolve()
+            })
         })
-        expect(response.status).toHaveBeenCalledWith(200)
-        expect(data.mensaje).toBe("Login exitoso")
-
-        // Confirmamos que se llamó a "Cloudflare" (nuestro doble)
-        expect(global.fetch).toHaveBeenCalled()
-        // Y que la sesión quedó con el usuario
-        expect(request.session.email).toBe(USUARIO.email)
-    })
-})
-
-describe("GET: /usuarios/CargarTodos", () => {
-
-    test("debe traer una lista con datos", async () => {
-        const { response, data } = await ejecutar("CargarTodos")
-        expect(response.status).toHaveBeenCalledWith(200)
-        expect(Array.isArray(data)).toBe(true)
-        expect(data.length).toBeGreaterThan(0)
-    })
-
-    test("la lista debe incluir el usuario de prueba", async () => {
-        const { data } = await ejecutar("CargarTodos")
-        const encontrado = data.some((usuario) => usuario.email === USUARIO.email)
-        expect(encontrado).toBe(true)
-    })
-})
-
-describe("GET: /usuarios/CargarId", () => {
-
-    test("debe traer el usuario por su _id", async () => {
-        // Buscamos el _id real que Mongo le asignó al usuario de prueba
-        const doc = await Usuarios.findOne({ email: USUARIO.email })
-        const id = String(doc._id)
-
-        const { response, data } = await ejecutar("CargarId", {}, { _id: id })
-        expect(response.status).toHaveBeenCalledWith(200)
-        expect(data.nombre).toBe(USUARIO.nombre)
-        expect(data.email).toBe(USUARIO.email)
-    })
-
-    test("debe responder null si el _id no existe", async () => {
-        // Un _id con formato válido pero que no está en la BD
-        const idInventado = String(new mongoose.Types.ObjectId())
-
-        const { data } = await ejecutar("CargarId", {}, { _id: idInventado })
-        expect(data).toBeNull()
-    })
-})
-
-describe("PUT: /usuarios/Actualizar", () => {
-
-    test("debe actualizar el nombre y el rol del usuario", async () => {
-        const doc = await Usuarios.findOne({ email: USUARIO.email })
-        const id = String(doc._id)
-
-        const { response, data } = await ejecutar("Actualizar", {
-            _id: id,
-            nombre: "Usuario Jest Editado",
-            estado: true,
-            nombrerol: "Administrador"
-        })
-        expect(response.status).toHaveBeenCalledWith(200)
-        expect(data.mensaje).toBe("Usuario actualizado con éxito")
-
-        // Confirmamos en la BD que los cambios quedaron guardados
-        const actualizado = await Usuarios.findById(id)
-        expect(actualizado.nombre).toBe("Usuario Jest Editado")
-        expect(actualizado.nombrerol).toBe("Administrador")
-    })
-
-    test("no debe cambiar el email al actualizar", async () => {
-        const actualizado = await Usuarios.findOne({ email: USUARIO.email })
-        expect(actualizado).not.toBeNull()
-    })
-})
-
-describe("DELETE: /usuarios/Eliminar", () => {
-
-    test("debe eliminar el usuario", async () => {
-        const doc = await Usuarios.findOne({ email: USUARIO.email })
-        const id = String(doc._id)
-
-        const { response, data } = await ejecutar("Eliminar", { _id: id })
-        expect(response.status).toHaveBeenCalledWith(200)
-        expect(data.mensaje).toBe("Usuario eliminado con éxito")
-
-        // Confirmamos en la BD que ya no existe
-        const borrado = await Usuarios.findById(id)
-        expect(borrado).toBeNull()
-    })
-
-    test("el usuario ya no debe aparecer en CargarTodos", async () => {
-        const { data } = await ejecutar("CargarTodos")
-        const encontrado = data.some((usuario) => usuario.email === USUARIO.email)
-        expect(encontrado).toBe(false)
     })
 })

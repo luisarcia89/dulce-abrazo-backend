@@ -4,6 +4,7 @@ var mailer = require("../../utils/mailer.js");
 var turnstileConfig = require("../../utils/turnstileConfig.js");
 var anexosModel = require("../modelos/anexosModel.js");
 const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
 
 usuariosController.Registrar = function (request, response) {
   usuariosModel.BuscarPorEmail({ email: request.body.email }, function (usuarioExistente) {
@@ -85,6 +86,13 @@ usuariosController.Guardar = function (request, response) {
 }
 
 usuariosController.Login = function (request, response) {
+
+  if (!request.body.email) {
+    return response.status(400).json({ mensaje: "El campo email es obligatorio" });
+  }
+  if (!request.body.password) {
+    return response.status(400).json({ mensaje: "El campo password es obligatorio" });
+  }
 
   var token = request.body.turnstileToken;
 
@@ -202,13 +210,41 @@ usuariosController.CargarId = function (request, response) {
 }
 
 usuariosController.Actualizar = function (request, response) {
+
+  if (!request.body._id) {
+    return response.status(400).json({ mensaje: "El campo _id es obligatorio" });
+  }
+  if (!mongoose.isValidObjectId(request.body._id)) {
+    return response.status(400).json({ mensaje: "El _id no es válido" });
+  }
+  if (!request.body.nombre) {
+    return response.status(400).json({ mensaje: "El campo nombre es obligatorio" });
+  }
+  if (!request.body.nombrerol) {
+    return response.status(400).json({ mensaje: "El campo nombrerol es obligatorio" });
+  }
+
   usuariosModel.Actualizar(request.body, function (doc) {
+    if (!doc) {
+      return response.status(404).json({ mensaje: "El _id no existe en la BD" });
+    }
     response.status(200).json({ mensaje: "Usuario actualizado con éxito", usuario: doc });
   });
 }
 
 usuariosController.Eliminar = function (request, response) {
+
+  if (!request.body._id) {
+    return response.status(400).json({ mensaje: "El campo _id es obligatorio" });
+  }
+  if (!mongoose.isValidObjectId(request.body._id)) {
+    return response.status(400).json({ mensaje: "El _id no es válido" });
+  }
+
   usuariosModel.Eliminar(request.body, function (doc) {
+    if (!doc) {
+      return response.status(404).json({ mensaje: "El _id no existe en la BD" });
+    }
     response.status(200).json({ mensaje: "Usuario eliminado con éxito" });
   });
 }
