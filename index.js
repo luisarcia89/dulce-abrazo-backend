@@ -7,7 +7,7 @@ const { sololoqueado } = require('./middleware/sololoqueado.js');
 const app = express();
 
 app.use(cors({
-  origin: 'http://localhost:4200',
+  origin: ['http://localhost:4200', 'http://localhost:9876'],
   credentials: true
 }));
 

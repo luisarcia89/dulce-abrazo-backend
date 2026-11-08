@@ -2,3 +2,4 @@ node_modules/
 coverage/
 utils/mailer.js
 utils/turnstileConfig.js
+src/app/credenciales-test.ts
