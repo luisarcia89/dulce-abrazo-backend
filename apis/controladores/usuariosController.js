@@ -109,7 +109,9 @@ usuariosController.Login = function (request, response) {
     })
   })
     .then((res) => res.json())
-    .then((resultadoCaptcha) => {
+        .then((resultadoCaptcha) => {
+
+      console.log("Respuesta de Cloudflare:", resultadoCaptcha);
 
       if (!resultadoCaptcha.success) {
         return response.status(403).json({ mensaje: "Captcha inválido, intenta de nuevo" });
@@ -146,6 +148,7 @@ usuariosController.Login = function (request, response) {
         });
       });
     })
+
     .catch((err) => {
       console.error("Error verificando captcha", err);
       response.status(500).json({ mensaje: "Error al verificar el captcha" });

@@ -3,11 +3,12 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const session = require('express-session');
 const { sololoqueado } = require('./middleware/sololoqueado.js');
+const path = require('path');
 
 const app = express();
 
 app.use(cors({
-  origin: ['http://localhost:4200', 'http://localhost:9876'],
+  origin: ['http://localhost:4200', 'http://localhost:9876', 'https://dulceabrazo.waco.com.co'],
   credentials: true
 }));
 
@@ -26,7 +27,7 @@ mongoose.connect('mongodb://localhost:27017/ClientesDulceAbrazo')
   .then(() => console.log('Conectado a MongoDB - ClientesDulceAbrazo'))
   .catch((err) => console.error('Error al conectar a MongoDB', err));
 
-app.use('/uploads', express.static('uploads'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 var carritosController = require('./apis/controladores/carritosController.js');
 
@@ -113,6 +114,16 @@ app.delete('/apiroles/Eliminar', sololoqueado, apirolesController.Eliminar);
   { "path": "/usuarios/Actualizar", "metodo": "put", "nombrerol": "Administrador", "permiso": "Si" },
   { "path": "/usuarios/Eliminar", "metodo": "delete", "nombrerol": "Administrador", "permiso": "Si" }
 ]
+
+app.delete('/apiroles/Eliminar', sololoqueado, apirolesController.Eliminar);
+
+const rutaFront = path.join(__dirname, 'dist', 'dulce-abrazo', 'browser');
+
+app.use(express.static(rutaFront));
+
+app.get(/.*/, (req, res) => {
+  res.sendFile(path.join(rutaFront, 'index.html'));
+});
 
 app.listen(3001, () => {
   console.log('Servidor Dulce Abrazo corriendo en el puerto 3001');
