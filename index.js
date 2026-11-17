@@ -23,7 +23,7 @@ app.use(session({
 }));
 
 
-mongoose.connect('mongodb://localhost:27017/ClientesDulceAbrazo')
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/ClientesDulceAbrazo')
   .then(() => console.log('Conectado a MongoDB - ClientesDulceAbrazo'))
   .catch((err) => console.error('Error al conectar a MongoDB', err));
 
